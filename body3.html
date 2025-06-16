@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Пианино для компьютера с записью в MP3</title>
+<style>
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+  }
+  header {
+    padding: 1rem 1.5rem 0.5rem;
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-align: center;
+    color: #0ff;
+    text-shadow:
+      0 0 5px #0ff,
+      0 0 20px #0ff,
+      0 0 30px #0ff;
+  }
+  #controls {
+    margin: 10px 0 20px 0;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    background: #0ff;
+    border: none;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #000;
+    box-shadow:
+      0 2px 5px ;
+    transition: background-color 0.2s ease;
+    user-select: none;
+  }
+  button:hover:not(:disabled) {
+    background: #0cc;
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  #instructions {
+    margin: 0 20px 25px;
+    font-size: 1.1rem;
+    text-align: center;
+    max-width: 600px;
+    color: #0ff;
+    user-select: none;
+    line-height: 1.4;
+  }
+  #piano {
+    margin-top: 0;
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    height: 240px;
+    touch-action: manipulation;
+  }
+  /* White keys container */
+  .white-keys {
+    display: flex;
+    height: 100%;
+    border: 2px solid #0ff;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow:
+      inset 0 0 10px #00ffff55,
+      0 3px 8px #08f6;
+  }
+  /* White key */
+  .key.white {
+    position: relative;
+    flex: 1 1 0;
+    border-right: 1px solid #ccc;
+    border-radius: 0 0 8px 8px;
+    background: linear-gradient(145deg, #eee, #ccc);
+    box-shadow:
+      inset 0 0 5px #bbb,
+      0 4px 6px #999;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+    z-index: 1;
+  }
+  .key.white:last-child {
+    border-right: none;
+  }
+  .key.white.active {
+    background: #0ff;
+    box-shadow:
+      0 0 10px #0ff,
+      0 0 25px #0ff;
+  }
+  /* Black keys container */
+  .black-keys {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 140px;
+    pointer-events: none; /* only allow events on black keys themselves */
+  }
+  /* Black key */
+  .key.black {
+    position: absolute;
+    width: 40px;
+    height: 140px;
+    background: linear-gradient(145deg, #222, #000);
+    border-radius: 0 0 6px 6px;
+    box-shadow:
+      inset 0 3px 8px #111,
+      0 5px 8px #000;
+    z-index: 2;
+    cursor: pointer;
+    user-select: none;
+    pointer-events: auto;
+    transition:
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  .key.black.active {
+    background: #0ff;
+    box-shadow:
+      0 0 12px #0ff,
+      0 0 30px #0ff;
+  }
+  /* Position black keys */
+  .key.black[data-note="C#3"] {
+    left: calc(5% - 20px);
+  }
+  .key.black[data-note="D#3"] {
+    left: calc(10% - 20px);
+  }
+  .key.black[data-note="F#3"] {
+    left: calc(19% - 20px);
+  }
+  .key.black[data-note="G#3"] {
+    left: calc(23.84% - 20px);
+  }
+  .key.black[data-note="A#3"] {
+    left: calc(28.67% - 20px);
+  }
+  .key.black[data-note="C#4"] {
+    left: calc(38% - 20px);
+  }
+  .key.black[data-note="D#4"] {
+    left: calc(43% - 20px);
+  }
+  .key.black[data-note="F#4"] {
+    left: calc(52.44% - 20px);
+  }
+  .key.black[data-note="G#4"] {
+    left: calc(57.34% - 20px);
+  }
+  .key.black[data-note="A#4"] {
+    left: calc(62.55% - 20px);
+  }
+  .key.black[data-note="C#5"] {
+    left: calc(71.55% - 20px);
+  }
+  .key.black[data-note="D#5"] {
+    left: calc(76.5% - 20px);
+  }
+  .key.black[data-note="F#5"] {
+    left: calc(85.5% - 20px);
+  }
+  .key.black[data-note="G#5"] {
+    left: calc(90.54% - 20px);
+  }
+  .key.black[data-note="A#5"] {
+    left: calc(95.2% - 20px);
+  }
+  /* Labels on keys */
+  .key-label {
+    position: absolute;
+    bottom: 8px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.70rem;
+    font-weight: 600;
+    color: #222;
+    pointer-events: none;
+    user-select: none;
+    text-shadow: 0 0 2px #fff;
+  }
+  .key.black .key-label {
+    color: #0ff;
+    text-shadow:
+      0 0 5px #0ff,
+      0 0 10px #0ff;
+  }
+
+  @media (max-width: 350px) {
+    #piano {
+      height: 160px;
+    }
+    .key.black {
+      width: 24px;
+      height: 90px;
+    }
+  }
+</style>
+</head>
+<body>
+<header>Виртуальное Пианино</header>
+<div id="controls">
+  <button id="recordBtn">Начать запись</button>
+  <button id="stopBtn" disabled>Остановить запись</button>
+  <button id="saveBtn" disabled>Скачать MP3</button>
+  <button id="clearBtn" disabled>Очистить мелодию</button>
+</div>
+<div id="instructions">
+  Мелодии записываются в MP3 формате.
+</div>
+<div id="piano" aria-label="Виртуальное пианино" role="application">
+  <div class="white-keys">
+    <!-- Низшая октава -->
+    <div data-note="C3" class="key white" tabindex="0"><div class="key-label">C</div></div>
+    <div data-note="D3" class="key white" tabindex="0"><div class="key-label">D</div></div>
+    <div data-note="E3" class="key white" tabindex="0"><div class="key-label">E</div></div>
+    <div data-note="F3" class="key white" tabindex="0"><div class="key-label">F</div></div>
+    <div data-note="G3" class="key white" tabindex="0"><div class="key-label">G</div></div>
+    <div data-note="A3" class="key white" tabindex="0"><div class="key-label">A</div></div>
+    <div data-note="B3" class="key white" tabindex="0"><div class="key-label">B</div></div>
+    
+    <!-- Обычная октава -->
+    <div data-note="C4" class="key white" tabindex="0"><div class="key-label">C</div></div>
+    <div data-note="D4" class="key white" tabindex="0"><div class="key-label">D</div></div>
+    <div data-note="E4" class="key white" tabindex="0"><div class="key-label">E</div></div>
+    <div data-note="F4" class="key white" tabindex="0"><div class="key-label">F</div></div>
+    <div data-note="G4" class="key white" tabindex="0"><div class="key-label">G</div></div>
+    <div data-note="A4" class="key white" tabindex="0"><div class="key-label">A</div></div>
+    <div data-note="B4" class="key white" tabindex="0"><div class="key-label">B</div></div>
+    
+    <!-- Высшая октава -->
+    <div data-note="C5" class="key white" tabindex="0"><div class="key-label">C</div></div>
+    <div data-note="D5" class="key white" tabindex="0"><div class="key-label">D</div></div>
+    <div data-note="E5" class="key white" tabindex="0"><div class="key-label">E</div></div>
+    <div data-note="F5" class="key white" tabindex="0"><div class="key-label">F</div></div>
+    <div data-note="G5" class="key white" tabindex="0"><div class="key-label">G</div></div>
+    <div data-note="A5" class="key white" tabindex="0"><div class="key-label">A</div></div>
+    <div data-note="B5" class="key white" tabindex="0"><div class="key-label">B</div></div>
+  </div>
+  <div class="black-keys">
+    <!-- Низшая октава -->
+    <div data-note="C#3" class="key black" tabindex="0"><div class="key-label">C#</div></div>
+    <div data-note="D#3" class="key black" tabindex="0"><div class="key-label">D#</div></div>
+    <div data-note="F#3" class="key black" tabindex="0"><div class="key-label">F#</div></div>
+    <div data-note="G#3" class="key black" tabindex="0"><div class="key-label">G#</div></div>
+    <div data-note="A#3" class="key black" tabindex="0"><div class="key-label">A#</div></div>
+    
+    <!-- Обычная октава -->
+    <div data-note="C#4" class="key black" tabindex="0"><div class="key-label">C#</div></div>
+    <div data-note="D#4" class="key black" tabindex="0"><div class="key-label">D#</div></div>
+    <div data-note="F#4" class="key black" tabindex="0"><div class="key-label">F#</div></div>
+    <div data-note="G#4" class="key black" tabindex="0"><div class="key-label">G#</div></div>
+    <div data-note="A#4" class="key black" tabindex="0"><div class="key-label">A#</div></div>
+    
+    <!-- Высшая октава -->
+    <div data-note="C#5" class="key black" tabindex="0"><div class="key-label">C#</div></div>
+    <div data-note="D#5" class="key black" tabindex="0"><div class="key-label">D#</div></div>
+    <div data-note="F#5" class="key black" tabindex="0"><div class="key-label">F#</div></div>
+    <div data-note="G#5" class="key black" tabindex="0"><div class="key-label">G#</div></div>
+    <div data-note="A#5" class="key black" tabindex="0"><div class="key-label">A#</div></div>
+  </div>
+</div>
+
+<script>
+  (() => {
+    window.addEventListener('keydown', e => {
+      const key = e.key.toLowerCase();
+      if (keyMap.hasOwnProperty(key) && !activeKeys.has(key)) {
+        activeKeys.add(key);
+        const note = keyMap[key];
+        playNoteByName(note);
+        activateKey(note);
+      }
+    });
+    window.addEventListener('keyup', e => {
+      const key = e.key.toLowerCase();
+      if (keyMap.hasOwnProperty(key)) {
+        activeKeys.delete(key);
+        const note = keyMap[key];
+        deactivateKey(note);
+      }
+    });
+
+    const noteFrequencies = {
+      'C3': 130.81,
+      'C#3': 138.59,
+      'D3': 146.83,
+      'D#3': 155.56,
+      'E3': 164.81,
+      'F3': 174.61,
+      'F#3': 185.00,
+      'G3': 196.00,
+      'G#3': 207.65,
+      'A3': 220.00,
+      'A#3': 233.08,
+      'B3': 246.94,
+      'C4': 261.63,
+      'C#4': 277.18,
+      'D4': 293.66,
+      'D#4': 311.13,
+      'E4': 329.63,
+      'F4': 349.23,
+      'F#4': 369.99,
+      'G4': 392.00,
+      'G#4': 415.30,
+      'A4': 440.00,
+      'A#4': 466.16,
+      'B4': 493.88,
+      'C5': 523.25,
+      'C#5': 554.37,
+      'D5': 587.33,
+      'D#5': 622.25,
+      'E5': 659.25,
+      'F5': 698.46,
+      'F#5': 739.99,
+      'G5': 783.99,
+      'G#5': 830.61,
+      'A5': 880.00,
+      'A#5': 932.33,
+      'B5': 987.77,
+    };
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.value = 1.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Setup MediaStreamDestination & MediaRecorder to capture audio
+    const dest = audioCtx.createMediaStreamDestination();
+    masterGain.connect(dest);
+
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    function playNote(freq) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+
+      osc.connect(gainNode);
+      gainNode.connect(masterGain);
+
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 1.2);
+    }
+
+    const piano = document.getElementById('piano');
+    const keys = piano.querySelectorAll('.key');
+
+    function playNoteByName(note) {
+      const freq = noteFrequencies[note];
+      if (!freq) return;
+      playNote(freq);
+    }
+
+    function activateKey(note) {
+      keys.forEach(key => {
+        if (key.dataset.note === note) {
+          key.classList.add('active');
+        }
+      });
+    }
+    function deactivateKey(note) {
+      keys.forEach(key => {
+        if (key.dataset.note === note) {
+          key.classList.remove('active');
+        }
+      });
+    }
+
+    keys.forEach(key => {
+      key.addEventListener('mousedown', e => {
+        const note = e.target.dataset.note || e.target.parentElement.dataset.note;
+        if (!note) return;
+        playNoteByName(note);
+        activateKey(note);
+      });
+      key.addEventListener('mouseup', e => {
+        const note = e.target.dataset.note || e.target.parentElement.dataset.note;
+        if (!note) return;
+        deactivateKey(note);
+      });
+      key.addEventListener('mouseleave', e => {
+        const note = e.target.dataset.note || e.target.parentElement.dataset.note;
+        if (!note) return;
+        deactivateKey(note);
+      });
+      key.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const target = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+        if (!target) return;
+        const note = target.dataset.note || target.parentElement.dataset.note;
+        if (!note) return;
+        playNoteByName(note);
+        activateKey(note);
+      }, {passive: false});
+      key.addEventListener('touchend', e => {
+        e.preventDefault();
+        const target = e.target;
+        const note = target.dataset.note || target.parentElement.dataset.note;
+        if (!note) return;
+        deactivateKey(note);
+      });
+    });
+
+    const activeKeys = new Set();
+    window.addEventListener('keydown', e => {
+      const key = e.key.toLowerCase();
+      if (!keyMap.hasOwnProperty(key)) return;
+      if (activeKeys.has(key)) return;
+      activeKeys.add(key);
+
+      const note = keyMap[key];
+      playNoteByName(note);
+      activateKey(note);
+    });
+
+    window.addEventListener('keyup', e => {
+      const key = e.key.toLowerCase();
+      if (!keyMap.hasOwnProperty(key)) return;
+      activeKeys.delete(key);
+
+      const note = keyMap[key];
+      deactivateKey(note);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+      }
+    });
+
+    // Buttons and recording state
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    recordBtn.addEventListener('click', () => {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(dest.stream);
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.start();
+      recordBtn.disabled = true;
+      stopBtn.disabled = false;
+      saveBtn.disabled = true;
+      clearBtn.disabled = true;
+    });
+
+    stopBtn.addEventListener('click', () => {
+      if (!mediaRecorder) return;
+      mediaRecorder.stop();
+      mediaRecorder.onstop = () => {
+        saveBtn.disabled = recordedChunks.length === 0;
+        clearBtn.disabled = recordedChunks.length === 0;
+      };
+      recordBtn.disabled = false;
+      stopBtn.disabled = true;
+    });
+
+    saveBtn.addEventListener('click', () => {
+      if (recordedChunks.length === 0) return;
+      const blob = new Blob(recordedChunks, { type: recordedChunks[0].type });
+      // The Blob may be webm/ogg; we force filename with .mp3 extension as user asked
+      const filename = 'melody.mp3';
+
+      const url = URL.createObjectURL(blob);
+      const dlAnchorElem = document.createElement('a');
+      dlAnchorElem.style.display = 'none';
+      dlAnchorElem.href = url;
+      dlAnchorElem.download = filename;
+      document.body.appendChild(dlAnchorElem);
+      dlAnchorElem.click();
+      setTimeout(() => {
+        document.body.removeChild(dlAnchorElem);
+        URL.revokeObjectURL(url);
+      }, 100);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      recordedChunks = [];
+      saveBtn.disabled = true;
+      clearBtn.disabled = true;
+    });
+  })();
+</script>
+</body>
+</html>
